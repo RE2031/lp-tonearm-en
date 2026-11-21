@@ -11,8 +11,8 @@ const A0 = Math.atan2(C.y - P.y, C.x - P.x);
 const T_REST = 0.85, T_MIN = 0.05, T_MAX = 0.95;   // 암 각도(θ) 범위
 const GRAB_R = 135;
 const BOXES = [                                    // 오른쪽 아래 버튼 상자 (두 번 집기)
-  { id: "restart", x: 840, y: 375, w: 145, h: 140, icon: "↺", label: "처음으로" },
-  { id: "next", x: 840, y: 530, w: 145, h: 140, icon: "⏭", label: "다음 곡" },
+  { id: "restart", x: 840, y: 375, w: 145, h: 140, icon: "↺", label: "Restart" },
+  { id: "next", x: 840, y: 530, w: 145, h: 140, icon: "⏭", label: "Next track" },
 ];
 const boxAt = (p) => BOXES.find((b) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) || null;
 
@@ -69,16 +69,16 @@ const DEFAULT_SONGS = [
   { id: "dQw4w9WgXcQ", title: "Rick Astley — Never Gonna Give You Up" },
   { id: "9bZkp7q19f0", title: "PSY — GANGNAM STYLE" },
   { id: "kJQP7kiw5Fk", title: "Luis Fonsi — Despacito" },
-  { id: "5qap5aO4i9A", title: "Lofi Girl — beats to relax/study to 📚 (라이브)" },
+  { id: "5qap5aO4i9A", title: "Lofi Girl — beats to relax/study to 📚 (Live)" },
 ];
 let songs = DEFAULT_SONGS, results = [];
 try {
-  const j = JSON.parse(localStorage.getItem("yt_songs"));
+  const j = JSON.parse(localStorage.getItem("lp_tonearm_en_songs"));
   if (Array.isArray(j) && j.length) {
-    songs = j.map(s => s.id === "jfKfPfyJRdk" ? { id: "5qap5aO4i9A", title: "Lofi Girl — beats to relax/study to 📚 (라이브)" } : s);
+    songs = j.map(s => s.id === "jfKfPfyJRdk" ? { id: "5qap5aO4i9A", title: "Lofi Girl — beats to relax/study to 📚 (Live)" } : s);
   }
 } catch {}
-const saveSongs = () => { try { localStorage.setItem("yt_songs", JSON.stringify(songs)); } catch {} };
+const saveSongs = () => { try { localStorage.setItem("lp_tonearm_en_songs", JSON.stringify(songs)); } catch {} };
 
 let current = songs[0], labelImg = new Image(), ytReady = false, player = null;
 labelImg.src = `https://i.ytimg.com/vi/${current.id}/hqdefault.jpg`;
@@ -97,9 +97,9 @@ function renderSongs() {
   songs.forEach((sg, idx) => {
     const li = document.createElement("li");
     if (current && current.id === sg.id) li.className = "on";
-    li.innerHTML = `<img src="${thumb(sg.id)}" alt=""><span></span><button title="삭제">✕</button>`;
+    li.innerHTML = `<img src="${thumb(sg.id)}" alt=""><span></span><button title="Remove track">✕</button>`;
     li.querySelector("span").textContent = `${idx + 1}. ${sg.topic === false ? "⚠ " : ""}${sg.title}`;
-    if (sg.topic === false) li.title = "Topic 영상이 아니라 광고가 나올 수 있어요";
+    if (sg.topic === false) li.title = "This video is not from a Topic channel and may contain ads.";
     li.onclick = () => { unlockAudio(); selectSong(sg); };
     li.querySelector("button").onclick = (e) => {
       e.stopPropagation();
@@ -126,7 +126,7 @@ function renderResults() {
 function addSong(item) {
   if (!songs.some((x) => x.id === item.id)) songs = [...songs, item];   // 뒤에 추가 = 재생 순서
   saveSongs(); renderSongs(); renderResults();
-  setStatus(`플레이리스트에 추가: ${item.title} (총 ${songs.length}곡)`);
+  setStatus(`Added to playlist: ${item.title} (${songs.length} total)`);
 }
 
 const getDur = () => (ytReady && player && player.getDuration ? player.getDuration() || 0 : 0);
@@ -143,7 +143,7 @@ function selectSong(s) {
     if (player.loadVideoById) player.loadVideoById(s.id);
   } else {
     if (player.cueVideoById) player.cueVideoById(s.id);
-    setStatus("곡을 골랐어요. 핀을 LP 위에 올려보세요.");
+    setStatus("Track selected. Move the needle onto the record.");
   }
 }
 
@@ -171,6 +171,7 @@ function initPlayer() {
     videoId: current.id,
     width: "100%", height: "100%",
     playerVars: {
+      hl: "en",
       playsinline: 1,
       rel: 0,
       controls: 0,
@@ -207,14 +208,14 @@ function initPlayer() {
           if (dur > 0) { player.seekTo(Math.min(pendingSeek * dur, dur - 2), true); lastSeekAt = performance.now(); }
           pendingSeek = null;
         }
-        if (e.data === YT.PlayerState.ENDED) { onRecord = false; setStatus("곡이 끝났어요. 핀이 제자리로 돌아갑니다."); }
+        if (e.data === YT.PlayerState.ENDED) { onRecord = false; setStatus("Track ended. The needle will return to its rest."); }
         updatePlayButton();
       },
       onError: (e) => {
         onRecord = false;
-        let msg = "이 영상은 재생할 수 없어요 (퍼가기 제한). 다른 곡을 골라보세요.";
-        if (e.data === 150 || e.data === 101) msg = "퍼가기가 제한된 음원/영상입니다. 다른 곡을 선택해 주세요.";
-        else if (e.data === 2) msg = "유효하지 않은 영상 링크입니다.";
+        let msg = "This video cannot be played here. Choose another track.";
+        if (e.data === 150 || e.data === 101) msg = "Embedding is disabled for this video. Choose another track.";
+        else if (e.data === 2) msg = "Invalid video link.";
         setStatus(msg);
         updatePlayButton();
       },
@@ -235,7 +236,7 @@ if (window.YT && window.YT.Player) {
 
 function startPlayback(p) {
   if (!current) selectSong(songs[0]);
-  if (!ytReady || !player) { setStatus("플레이어 로딩 중… 잠시 후 다시 올려주세요."); onRecord = false; return; }
+  if (!ytReady || !player) { setStatus("Player loading… Try again in a moment."); onRecord = false; return; }
   lastStartPlaybackAt = performance.now();
   const dur = getDur();
   const vData = player.getVideoData ? player.getVideoData() : null;
@@ -245,7 +246,7 @@ function startPlayback(p) {
     lastSeekAt = performance.now();
     pendingSeek = null;
     player.playVideo();
-    setStatus(p === 0 ? "♪ 처음부터 재생 — 핀을 집어 올리면 멈춰요." : `♪ ${fmt(p * dur)} 부터 재생 — 핀을 집어 올리면 멈춰요.`);
+    setStatus(p === 0 ? "♪ Playing from the start — lift the needle to stop." : `♪ Playing from ${fmt(p * dur)} — lift the needle to stop.`);
   } else {
     pendingSeek = p > 0 ? p : null;
     if (same) {
@@ -254,14 +255,14 @@ function startPlayback(p) {
       const targetSec = p === 0 ? 0 : (dur > 0 ? Math.min(p * dur, dur - 2) : 0);
       player.loadVideoById({ videoId: current.id, startSeconds: targetSec });
     }
-    setStatus("♪ 재생 중 — 핀을 집어 올리면 멈춰요.");
+    setStatus("♪ Playing — lift the needle to stop.");
   }
 }
 
 /* 곡 추가 / 검색 */
 const keyEl = document.getElementById("api-key");
-try { keyEl.value = localStorage.getItem("yt_key") || ""; } catch {}
-keyEl.onchange = () => { try { localStorage.setItem("yt_key", keyEl.value.trim()); } catch {} };
+try { keyEl.value = localStorage.getItem("lp_tonearm_en_key") || ""; } catch {}
+keyEl.onchange = () => { try { localStorage.setItem("lp_tonearm_en_key", keyEl.value.trim()); } catch {} };
 
 document.getElementById("add-form").onsubmit = async (e) => {
   e.preventDefault();
@@ -283,7 +284,7 @@ document.getElementById("add-form").onsubmit = async (e) => {
     items.forEach((it) => { if (!songs.some((x) => x.id === it.id)) songs = [...songs, it]; });
     saveSongs(); renderSongs(); renderResults();
     selectSong(songs.find((x) => x.id === items[0].id));
-    setStatus(`${items.length}곡을 플레이리스트에 추가했어요 (총 ${songs.length}곡)` + (items.some((x) => x.topic === false) ? " — ⚠ Topic 영상이 아닌 곡은 광고가 나올 수 있어요." : ""));
+    setStatus(`Added ${items.length} to the playlist (${songs.length} total)` + (items.some((x) => x.topic === false) ? " — ⚠ Videos outside Topic channels may contain ads." : ""));
   } else if (keyEl.value.trim()) {                    // 검색 → 결과 목록 (＋ 로 담기)
     try {
       const u = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&videoCategoryId=10&maxResults=50&q=${encodeURIComponent(text + " topic")}&key=${keyEl.value.trim()}`;
@@ -293,10 +294,10 @@ document.getElementById("add-form").onsubmit = async (e) => {
       results = j.items.filter((i) => isTopic(i.snippet.channelTitle)).slice(0, 12)
         .map((i) => { div.innerHTML = i.snippet.title; return { id: i.id.videoId, title: div.textContent, topic: true }; });
       renderResults();
-      setStatus(results.length ? "Topic(광고 적은 음원) 결과만 보여줘요. ＋ 를 눌러 담으세요." : "Topic 채널 결과가 없어요. 아티스트명+곡명으로 다시 검색해 보세요.");
-    } catch (err) { setStatus("검색 실패: " + err.message); }
+      setStatus(results.length ? "Showing Topic channel results. Select ＋ to add a track." : "No Topic channel results. Try searching for the artist and track name.");
+    } catch (err) { setStatus("Search failed: " + err.message); }
   } else {
-    setStatus("검색하려면 API 키가 필요해요. 유튜브 링크를 붙여넣으면 바로 추가됩니다 (여러 개도 가능).");
+    setStatus("Enter an API key to search, or paste one or more YouTube links to add tracks.");
   }
   input.value = "";
 };
@@ -307,11 +308,11 @@ const togglePlayBtn = document.getElementById("toggle-play-btn");
 function updatePlayButton() {
   if (!togglePlayBtn) return;
   if (onRecord && playing) {
-    togglePlayBtn.textContent = "⏸ 톤암 내리기 (정지)";
+    togglePlayBtn.textContent = "⏸ Stop playback";
     togglePlayBtn.classList.remove("primary");
     togglePlayBtn.classList.add("secondary");
   } else {
-    togglePlayBtn.textContent = "▶ 톤암 올려서 재생";
+    togglePlayBtn.textContent = "▶ Play record";
     togglePlayBtn.classList.add("primary");
     togglePlayBtn.classList.remove("secondary");
   }
@@ -322,7 +323,7 @@ function togglePlay(forcePlay = false) {
   if (onRecord && !forcePlay) {
     onRecord = false;
     if (ytReady && player) player.pauseVideo();
-    setStatus("톤암을 내렸어요 (정지).");
+    setStatus("Playback stopped.");
   } else {
     onRecord = true;
     theta = thetaForProgress(0);
@@ -377,18 +378,18 @@ camBtn.onclick = async () => {
   // 브라우저 미지원 체크
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     showModal(
-      "📷 카메라 미지원 브라우저",
-      `<p>현재 브라우저에서는 웹캠/카메라 기능을 지원하지 않습니다.</p>` +
+      "📷 Camera unavailable in this browser",
+      `<p>This browser does not support camera access.</p>` +
       (isInApp
-        ? `<p><strong>카카오톡 / 인앱 브라우저</strong>에서는 카메라 접근이 기본 차단되어 있습니다.<br>우측 상단 메뉴에서 <strong>'다른 브라우저로 열기 (Safari / Chrome)'</strong>를 선택해 주세요.</p>`
-        : `<p>최신 버전의 <strong>Chrome, Edge, Safari</strong> 브라우저를 이용해 주세요.</p>`) +
-      `<p>마우스로도 LP판이나 톤암을 움직여 모든 기능을 즐기실 수 있습니다.</p>`
+        ? `<p><strong>KakaoTalk and other in-app browsers</strong> may block camera access.<br>Use the menu to <strong>open this page in Safari or Chrome</strong>.</p>`
+        : `<p>Try the latest version of <strong>Chrome, Edge, or Safari</strong>.</p>`) +
+      `<p>You can use your mouse to move the tonearm or click the record.</p>`
     );
     return;
   }
 
   camBtn.disabled = true;
-  camBtn.textContent = "카메라 요청 중…";
+  camBtn.textContent = "Requesting camera access…";
 
   let stream = null;
   try {
@@ -413,7 +414,7 @@ camBtn.onclick = async () => {
     video.srcObject = stream;
     await video.play();
 
-    camBtn.textContent = "AI 모델 로딩 중…";
+    camBtn.textContent = "Loading hand tracking…";
     const fileset = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
     const opts = (delegate) => ({
       baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task", delegate },
@@ -423,43 +424,43 @@ camBtn.onclick = async () => {
     catch { landmarker = await HandLandmarker.createFromOptions(fileset, opts("CPU")); }
 
     camBtn.disabled = false;
-    camBtn.textContent = "📷 카메라 켜짐 (제스처 사용 중)";
-    setStatus("손을 보여주세요. 엄지+검지를 맞대어(핀치) 핀 끝을 집고, LP 위에서 놓으세요.");
+    camBtn.textContent = "📷 Camera on (gestures enabled)";
+    setStatus("Show your hand. Pinch the needle with your thumb and index finger, then release it over the record.");
   } catch (err) {
     if (stream) {
       try { stream.getTracks().forEach((t) => t.stop()); } catch {}
     }
     video.parentElement.hidden = true;
     camBtn.disabled = false;
-    camBtn.textContent = "📷 카메라 켜기";
+    camBtn.textContent = "📷 Enable camera";
 
-    let title = "카메라를 켤 수 없습니다";
+    let title = "Could not start the camera";
     let body = "";
 
     if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-      title = "카메라를 감지하지 못했습니다";
-      body = `<p>브라우저에서 사용 가능한 카메라(웹캠)를 찾을 수 없습니다.</p>` +
+      title = "No camera detected";
+      body = `<p>The browser could not find an available camera.</p>` +
              `<ul>` +
-             `<li><strong>카메라 연결:</strong> 외장 웹캠이 컴퓨터 USB 포트에 정상 연결되어 있는지 확인해 주세요.</li>` +
-             `<li><strong>Windows 카메라 권한:</strong> <strong>Windows 설정 > 개인 정보 및 보안 > 카메라</strong>에서 <strong>'앱의 카메라 액세스'</strong> 및 <strong>'데스크톱 앱의 카메라 액세스'</strong>가 [켬]으로 되어 있는지 확인해 주세요.</li>` +
-             `<li><strong>노트북/스마트폰:</strong> 카메라가 내장된 노트북이나 스마트폰에서 접속하시면 바로 손 제스처를 사용하실 수 있습니다.</li>` +
+             `<li><strong>Check the connection.</strong> Make sure your USB webcam is plugged in.</li>` +
+             `<li><strong>Check Windows camera permissions.</strong> Under <strong>Settings → Privacy &amp; security → Camera</strong>, allow camera access for apps and desktop apps.</li>` +
+             `<li><strong>Try another device.</strong> A laptop or phone with a built-in camera can also track gestures.</li>` +
              `</ul>` +
-             `<p>마우스나 터치로도 LP판이나 톤암을 클릭하여 즉시 음악을 들으실 수 있습니다.</p>`;
+             `<p>You can also click or tap the record or tonearm to play.</p>`;
     } else if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-      title = "카메라 권한이 차단되었습니다";
-      body = `<p>브라우저에서 카메라 권한이 차단되어 있습니다.</p>` +
-             `<p>주소창 왼쪽의 <strong>자물쇠 아이콘(또는 사이트 설정)</strong>을 눌러 카메라 권한을 <strong>'허용'</strong>으로 변경한 뒤 페이지를 새로고침해 주세요.</p>`;
+      title = "Camera access blocked";
+      body = `<p>Your browser blocked camera access.</p>` +
+             `<p>Open <strong>site settings</strong> next to the address bar, set camera access to <strong>Allow</strong>, then reload the page.</p>`;
     } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
-      title = "카메라가 다른 프로그램에서 사용 중입니다";
-      body = `<p>Zoom, Discord, OBS, 카카오톡 또는 기본 카메라 앱에서 카메라를 이미 사용하고 있을 수 있습니다.</p>` +
-             `<p>해당 프로그램을 완전히 종료한 후 다시 <strong>📷 카메라 켜기</strong>를 눌러주세요.</p>`;
+      title = "Camera is in use";
+      body = `<p>Zoom, Discord, OBS, KakaoTalk, or another camera app may be using it.</p>` +
+             `<p>Close the other app and click <strong>📷 Enable camera</strong> again.</p>`;
     } else {
-      body = `<p>카메라 연결 중 오류가 발생했습니다: <strong>${err.name}: ${err.message}</strong></p>` +
-             `<p>마우스나 터치로도 LP판과 톤암을 자유롭게 조작하실 수 있습니다.</p>`;
+      body = `<p>Could not connect to the camera: <strong>${err.name}: ${err.message}</strong></p>` +
+             `<p>You can still use a mouse or touch to control the record and tonearm.</p>`;
     }
 
     showModal(title, body);
-    setStatus("카메라 오류: " + (err.name === "NotFoundError" ? "카메라 장치 인식 실패" : err.message));
+    setStatus("Camera error: " + (err.name === "NotFoundError" ? "No camera detected" : err.message));
   }
 };
 
@@ -506,7 +507,7 @@ canvas.addEventListener("pointerup", (e) => {
       onRecord = true;
       startPlayback(progressAt(theta));
     } else {
-      setStatus("LP 위가 아니에요. 핀이 제자리로 돌아갑니다.");
+      setStatus("The needle is off the record and will return to its rest.");
     }
     updatePlayButton();
   } else if (!hand.visible && !wasGrabbed) {
@@ -524,7 +525,7 @@ canvas.addEventListener("pointerup", (e) => {
       if (onRecord && Math.hypot(loc.x - n.x, loc.y - n.y) < GRAB_R) {
         onRecord = false;
         if (ytReady && player) player.pauseVideo();
-        setStatus("톤암을 제자리로 돌려놓았습니다.");
+        setStatus("The tonearm returned to its rest.");
         updatePlayButton();
       }
     }
@@ -538,7 +539,7 @@ let unlockUntil = 0, ytUnlocked = false, lastAdCheck = 0, adAuto = false;
 const setUnlocked = (on) => {
   ytUnlocked = on;
   ytWrap.classList.toggle("unlocked", on);
-  adBtn.textContent = on ? "🔓 광고 건너뛰기 가능 (잠시 후 자동 잠금)" : "🔒 잠김 — 광고가 나오면 눌러서 잠금 해제";
+  adBtn.textContent = on ? "🔓 Unlocked — skip the ad before it locks again" : "🔒 Locked — click to unlock when an ad plays";
 };
 adBtn.onclick = () => { unlockAudio(); unlockUntil = performance.now() + 15000; };
 const ytShield = document.getElementById("yt-shield");
@@ -559,16 +560,16 @@ function updateLock(now) {
 }
 
 function nextSong() {
-  if (songs.length < 2) { setStatus("플레이리스트에 곡이 하나뿐이에요. 곡을 더 추가해 주세요."); return; }
+  if (songs.length < 2) { setStatus("Add another track to skip to the next one."); return; }
   const i = current ? songs.findIndex((x) => x.id === current.id) : -1;
   selectSong(songs[(i + 1) % songs.length]);
-  setStatus("⏭ 다음 곡: " + current.title);
+  setStatus("⏭ Next track: " + current.title);
 }
 function restartSong() {
-  if (!onRecord || !ytReady) { setStatus("핀이 LP 위에 있을 때 쓸 수 있어요."); return; }
+  if (!onRecord || !ytReady) { setStatus("Move the needle onto the record first."); return; }
   player.seekTo(0, true); player.playVideo();
   pendingSeek = null; lastSeekAt = performance.now();
-  setStatus("↺ 처음부터 다시 재생");
+  setStatus("↺ Restarted the track");
 }
 function onTap(now, tp) {
   ripples.push({ x: tp.x, y: tp.y, t: now });
@@ -591,7 +592,7 @@ function update(dt, now) {
     grabbed = true; armed = false;
     if (!current) selectSong(songs[0]);
     if (onRecord) { onRecord = false; if (ytReady && player) player.pauseVideo(); }
-    setStatus("핀을 잡았어요. 중심 쪽 끝까지 가서 놓으면 처음부터, 바깥쪽에 놓으면 그 위치부터 재생돼요.");
+    setStatus("Needle held. Release near the center to start over, or farther out to play from that position.");
     updatePlayButton();
   }
 
@@ -599,7 +600,7 @@ function update(dt, now) {
   if (grabbed && !inp.down && hand.visible) {
     grabbed = false;
     if (onRecordAt(theta)) { onRecord = true; startPlayback(progressAt(theta)); }
-    else setStatus("LP 위가 아니에요. 핀이 제자리로 돌아갑니다.");
+    else setStatus("The needle is off the record and will return to its rest.");
     updatePlayButton();
   }
 
@@ -613,7 +614,7 @@ function update(dt, now) {
 
   // 브라우저 자동재생 차단 감지 (1.5초 이상 지났는데 아직 playing이 아닐 때 사용자 안내)
   if (onRecord && !playing && now - lastStartPlaybackAt > 1500 && now - lastStartPlaybackAt < 12000) {
-    setStatus("소리를 재생하려면 화면 아무 곳이나 한 번 클릭해 주세요 🔊");
+    setStatus("Click anywhere to enable audio 🔊");
   }
 
   // 오른쪽 아래 상자에서 더블 핀치
@@ -728,7 +729,7 @@ function drawTime() {
   let txt, hot = false;
   if (grabbed) {
     hot = onRecordAt(theta);
-    txt = !hot ? "LP 위에 올려보세요" : inStartZone(theta) ? "↺ 처음부터 재생" : dur > 0 ? `${fmt(progressAt(theta) * dur)} / ${fmt(dur)}` : "LIVE";
+    txt = !hot ? "Move onto the record" : inStartZone(theta) ? "↺ Play from the start" : dur > 0 ? `${fmt(progressAt(theta) * dur)} / ${fmt(dur)}` : "LIVE";
   } else txt = dur > 0 && player && player.getCurrentTime ? `${fmt(player.getCurrentTime())} / ${fmt(dur)}` : "LIVE";
   const n = needlePos(theta);
   ctx.font = "600 22px system-ui, sans-serif";
@@ -751,7 +752,7 @@ function drawBoxes() {
     ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.font = "48px system-ui, sans-serif"; ctx.fillText(b.icon, cx, cy - 22);
     ctx.font = "700 22px system-ui, sans-serif"; ctx.fillText(b.label, cx, cy + 24);
-    ctx.font = "13px system-ui, sans-serif"; ctx.fillStyle = "rgba(255,255,255,.7)"; ctx.fillText("두 번 집기", cx, cy + 48);
+    ctx.font = "13px system-ui, sans-serif"; ctx.fillStyle = "rgba(255,255,255,.7)"; ctx.fillText("Pinch twice", cx, cy + 48);
   }
 }
 
